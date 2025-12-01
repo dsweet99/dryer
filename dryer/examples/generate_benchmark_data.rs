@@ -2,14 +2,14 @@
 //!
 //! Run with: cargo run --release --example generate_benchmark_data
 //!
-//! Creates test/benchmark_data/ with Python files.
+//! Creates tests/benchmark_data/ with Python files.
 
 use std::fs;
 use std::io::Write;
 use std::path::Path;
 
 fn main() {
-    let output_dir = Path::new("../test/benchmark_data");
+    let output_dir = Path::new("../tests/benchmark_data");
     
     if output_dir.exists() {
         fs::remove_dir_all(output_dir).expect("Failed to remove existing directory");
@@ -38,7 +38,7 @@ fn main() {
     }
 
     println!("Generated: {} files, {} functions", total_files, total_functions);
-    println!("Run: cargo run --release --example timing ../test/benchmark_data");
+    println!("Run: cargo run --release --example timing ../tests/benchmark_data");
 }
 
 fn generate_function(file_id: usize, func_id: usize) -> String {

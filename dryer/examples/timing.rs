@@ -27,7 +27,7 @@ fn main() {
     let path = if args.len() > 1 {
         PathBuf::from(&args[1])
     } else {
-        PathBuf::from("../test/fake_code")
+        PathBuf::from("../tests/fake_code")
     };
 
     let config = Config {

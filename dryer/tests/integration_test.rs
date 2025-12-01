@@ -1,7 +1,7 @@
-//! Integration tests validating duplicate detection against test/fake_code fixtures.
+//! Integration tests validating duplicate detection against tests/fake_code fixtures.
 //!
 //! These tests verify that the dryer tool correctly identifies the duplicates
-//! documented in test/fake_code/EXPECTED_DUPLICATES.md
+//! documented in tests/fake_code/EXPECTED_DUPLICATES.md
 
 use dryer::config::Config;
 use dryer::edit_distance::Duplicate;
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 /// Create a config targeting the fake_code directory
 fn test_config() -> Config {
     Config {
-        path: PathBuf::from("../test/fake_code"),
+        path: PathBuf::from("../tests/fake_code"),
         extensions: vec!["py".to_string()],
         min_len: 10,
         max_len: 500,
@@ -197,7 +197,7 @@ fn test_scans_subdirectories() {
 fn test_extension_filtering() {
     // Create config that only looks at .rs files (none exist in fake_code)
     let config = Config {
-        path: PathBuf::from("../test/fake_code"),
+        path: PathBuf::from("../tests/fake_code"),
         extensions: vec!["rs".to_string()],
         min_len: 10,
         max_len: 500,
