@@ -1,0 +1,35 @@
+[package]
+name = "dryer"
+version = "0.1.0"
+edition = "2021"
+description = "Fast fuzzy duplicate detection for source code"
+license = "MIT"
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# File system
+walkdir = "2"
+
+# Parallelism
+rayon = "1"
+
+# Fast hashing
+ahash = "0.8"
+rustc-hash = "2"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Edit distance (SIMD-accelerated)
+triple_accel = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
