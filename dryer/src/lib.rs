@@ -1,0 +1,87 @@
+pub mod chunker;
+pub mod config;
+pub mod edit_distance;
+pub mod lsh;
+pub mod minhash;
+pub mod normalizer;
+pub mod output;
+pub mod scanner;
+pub mod shingling;
+
+#[cfg(test)]
+pub mod test_utils {
+    use crate::chunker::Chunk;
+    use crate::config::Config;
+    use std::path::PathBuf;
+    use std::sync::Arc;
+
+    /// Creates a Chunk for testing purposes
+    pub fn make_chunk(file: &str, start: usize, end: usize, text: &str) -> Chunk {
+        Chunk {
+            file: Arc::new(PathBuf::from(file)),
+            start_line: start,
+            end_line: end,
+            original: text.to_string(),
+            normalized: text.to_string(),
+        }
+    }
+
+    /// Creates a simple Chunk with default file and line numbers for testing
+    pub fn make_simple_chunk(text: &str) -> Chunk {
+        make_chunk("test.py", 1, 5, text)
+    }
+
+    /// Creates a Config with custom minhash_size and shingle_size
+    pub fn config_with_minhash(minhash_size: usize, shingle_size: usize) -> Config {
+        Config {
+            minhash_size,
+            shingle_size,
+            ..Config::default()
+        }
+    }
+
+    /// Creates a Config with custom minhash_size and lsh_bands
+    pub fn config_with_lsh(minhash_size: usize, lsh_bands: usize) -> Config {
+        Config {
+            minhash_size,
+            lsh_bands,
+            ..Config::default()
+        }
+    }
+
+    /// Creates a Config with custom edit_threshold
+    pub fn config_with_threshold(threshold: f64) -> Config {
+        Config {
+            edit_threshold: threshold,
+            ..Config::default()
+        }
+    }
+}
+
+use config::Config;
+
+pub fn run(config: Config) -> Result<Vec<edit_distance::Duplicate>, Box<dyn std::error::Error>> {
+    config.validate()?;
+
+    let files = scanner::scan_files(&config.path, &config.extensions)?;
+    eprintln!("Found {} files", files.len());
+
+    let chunks = chunker::generate_chunks(&files, &config);
+    eprintln!("Generated {} chunks", chunks.len());
+
+    if chunks.is_empty() {
+        eprintln!("No chunks to analyze");
+        return Ok(vec![]);
+    }
+
+    let signatures = minhash::compute_signatures(&chunks, &config);
+    eprintln!("Computed {} signatures", signatures.len());
+
+    let candidates = lsh::find_candidates(&signatures, &config);
+    eprintln!("Found {} candidate pairs", candidates.len());
+
+    let duplicates = edit_distance::verify_candidates(&chunks, &signatures, &candidates, &config);
+    eprintln!("Verified {} duplicates", duplicates.len());
+
+    Ok(duplicates)
+}
