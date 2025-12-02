@@ -19,7 +19,11 @@ pub fn find_candidates(signatures: &[Signature], config: &Config) -> Vec<Candida
         );
     }
 
-    let mut candidates = rustc_hash::FxHashSet::default();
+    let estimated_candidates = (signatures.len() / 10).max(1000);
+    let mut candidates = rustc_hash::FxHashSet::with_capacity_and_hasher(
+        estimated_candidates,
+        Default::default(),
+    );
 
     for band_idx in 0..num_bands {
         let band_start = band_idx * rows_per_band;
@@ -44,14 +48,12 @@ pub fn find_candidates(signatures: &[Signature], config: &Config) -> Vec<Candida
     candidates.into_iter().collect()
 }
 
-/// Maximum bucket size before we skip it (avoids O(n²) explosion in degenerate cases)
 const MAX_BUCKET_SIZE: usize = 200;
 
 fn add_pairs_from_bucket(indices: &[usize], candidates: &mut rustc_hash::FxHashSet<CandidatePair>) {
     if indices.len() < 2 {
         return;
     }
-    // Skip degenerate buckets that would create too many pairs
     if indices.len() > MAX_BUCKET_SIZE {
         return;
     }
@@ -76,7 +78,7 @@ mod tests {
     use crate::test_utils::config_with_lsh;
 
     fn make_sig(hashes: Vec<u64>) -> Signature {
-        Signature { hashes }
+        Signature { hashes: hashes.into_boxed_slice() }
     }
 
     #[test]

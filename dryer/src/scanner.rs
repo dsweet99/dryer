@@ -1,8 +1,9 @@
+use ignore::WalkBuilder;
+use rayon::prelude::*;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use walkdir::WalkDir;
 
 #[derive(Debug, Clone)]
 pub struct SourceFile {
@@ -11,27 +12,23 @@ pub struct SourceFile {
 }
 
 pub fn scan_files(root: &Path, extensions: &[String]) -> io::Result<Vec<SourceFile>> {
-    let mut files = Vec::new();
-
-    for entry in WalkDir::new(root)
-        .follow_links(false)
-        .into_iter()
+    let paths: Vec<PathBuf> = WalkBuilder::new(root)
+        .hidden(true)
+        .git_ignore(true)
+        .git_global(true)
+        .git_exclude(true)
+        .ignore(true)
+        .build()
         .filter_map(|e| e.ok())
-    {
-        let path = entry.path();
+        .filter(|e| e.path().is_file())
+        .filter(|e| matches_extension_filter(e.path(), extensions))
+        .map(|e| e.into_path())
+        .collect();
 
-        if !path.is_file() {
-            continue;
-        }
-
-        if !matches_extension_filter(path, extensions) {
-            continue;
-        }
-
-        if let Some(source_file) = try_read_utf8_file(path) {
-            files.push(source_file);
-        }
-    }
+    let files: Vec<SourceFile> = paths
+        .into_par_iter()
+        .filter_map(|path| try_read_utf8_file(&path))
+        .collect();
 
     Ok(files)
 }
@@ -154,5 +151,22 @@ mod tests {
         let extensions = vec!["py".to_string()];
         let files = scan_files(dir.path(), &extensions).unwrap();
         assert_eq!(files.len(), 1);
+    }
+
+    #[test]
+    fn test_respects_ignore_file() {
+        let dir = create_temp_dir();
+        
+        fs::write(dir.path().join(".ignore"), "ignored.txt\nbuild/").unwrap();
+        fs::write(dir.path().join("included.txt"), "included").unwrap();
+        fs::write(dir.path().join("ignored.txt"), "ignored").unwrap();
+        let build_dir = dir.path().join("build");
+        fs::create_dir(&build_dir).unwrap();
+        fs::write(build_dir.join("output.txt"), "build output").unwrap();
+
+        let files = scan_files(dir.path(), &[]).unwrap();
+        
+        assert_eq!(files.len(), 1);
+        assert!(files[0].path.to_string_lossy().contains("included.txt"));
     }
 }

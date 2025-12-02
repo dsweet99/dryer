@@ -15,7 +15,6 @@ pub mod test_utils {
     use std::path::PathBuf;
     use std::sync::Arc;
 
-    /// Creates a Chunk for testing purposes
     pub fn make_chunk(file: &str, start: usize, end: usize, text: &str) -> Chunk {
         Chunk {
             file: Arc::new(PathBuf::from(file)),
@@ -26,12 +25,10 @@ pub mod test_utils {
         }
     }
 
-    /// Creates a simple Chunk with default file and line numbers for testing
     pub fn make_simple_chunk(text: &str) -> Chunk {
         make_chunk("test.py", 1, 5, text)
     }
 
-    /// Creates a Config with custom minhash_size and shingle_size
     pub fn config_with_minhash(minhash_size: usize, shingle_size: usize) -> Config {
         Config {
             minhash_size,
@@ -40,7 +37,6 @@ pub mod test_utils {
         }
     }
 
-    /// Creates a Config with custom minhash_size and lsh_bands
     pub fn config_with_lsh(minhash_size: usize, lsh_bands: usize) -> Config {
         Config {
             minhash_size,
@@ -49,7 +45,6 @@ pub mod test_utils {
         }
     }
 
-    /// Creates a Config with custom edit_threshold
     pub fn config_with_threshold(threshold: f64) -> Config {
         Config {
             edit_threshold: threshold,

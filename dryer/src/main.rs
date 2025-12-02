@@ -9,7 +9,6 @@ use dryer::output;
 #[command(name = "dryer", version, about)]
 struct Args {
     /// Directory to scan for duplicates
-    #[arg(default_value = ".")]
     path: PathBuf,
 
     /// File extensions to include (comma-separated, e.g., "py,rs,js")
@@ -69,9 +68,11 @@ fn main() {
         json_output: args.json,
     };
 
-    match dryer::run(config.clone()) {
+    let json_output = config.json_output;
+    
+    match dryer::run(config) {
         Ok(duplicates) => {
-            if config.json_output {
+            if json_output {
                 if let Err(e) = output::print_json(&duplicates) {
                     eprintln!("Error: {}", e);
                     std::process::exit(1);

@@ -13,8 +13,6 @@ pub struct Duplicate {
     pub normalized_distance: f64,
 }
 
-/// Minimum Jaccard similarity to proceed with edit distance computation.
-/// Lower Jaccard → higher edit distance, so we can skip pairs with low Jaccard.
 const MIN_JACCARD_SIMILARITY: f64 = 0.4;
 
 pub fn verify_candidates(
@@ -34,7 +32,6 @@ pub fn verify_candidates(
                 return None;
             }
 
-            // Jaccard pre-filter: estimate similarity from MinHash signatures
             let sig1 = &signatures[pair.idx1];
             let sig2 = &signatures[pair.idx2];
             let matching = sig1.hashes.iter().zip(&sig2.hashes).filter(|(a, b)| a == b).count();
@@ -56,22 +53,19 @@ pub fn verify_candidates(
                 });
             }
 
-            // Fast length pre-filter: |len(a) - len(b)| is a lower bound on edit distance
             let len_diff = a.len().abs_diff(b.len());
             if len_diff as f64 / max_len as f64 > config.edit_threshold {
                 return None;
             }
 
-            // Bounded edit distance: stop early if exceeds threshold
             let max_allowed = (config.edit_threshold * max_len as f64).ceil() as u32;
             let byte_edit_distance = match levenshtein_simd_k(a, b, max_allowed) {
                 Some(dist) => dist as usize,
-                None => return None, // Distance exceeds threshold
+                None => return None,
             };
 
             let normalized_by_bytes = byte_edit_distance as f64 / max_len as f64;
 
-            // Final check needed due to ceil() rounding
             if normalized_by_bytes > config.edit_threshold {
                 return None;
             }
@@ -208,9 +202,8 @@ mod tests {
 
     use crate::test_utils::{config_with_threshold, make_chunk};
 
-    /// Create mock signatures with 100% Jaccard similarity (for tests that don't care about Jaccard filter)
     fn mock_signatures(count: usize) -> Vec<Signature> {
-        (0..count).map(|_| Signature { hashes: vec![1, 2, 3, 4] }).collect()
+        (0..count).map(|_| Signature { hashes: vec![1, 2, 3, 4].into_boxed_slice() }).collect()
     }
 
     #[test]

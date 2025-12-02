@@ -1,6 +1,6 @@
 use crate::edit_distance::Duplicate;
 use serde::Serialize;
-use std::io::{self, Write};
+use std::io::{self, BufWriter, Write};
 
 const HEADER_WIDTH: usize = 70;
 
@@ -35,8 +35,10 @@ pub fn print_json(duplicates: &[Duplicate]) -> io::Result<()> {
         })
         .collect();
 
-    let json = serde_json::to_string_pretty(&json_dupes)?;
-    println!("{}", json);
+    let stdout = io::stdout();
+    let mut out = BufWriter::new(stdout.lock());
+    serde_json::to_writer_pretty(&mut out, &json_dupes)?;
+    writeln!(out)?;
     Ok(())
 }
 

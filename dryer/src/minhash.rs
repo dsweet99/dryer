@@ -5,12 +5,10 @@ use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct Signature {
-    pub hashes: Vec<u64>,
+    pub hashes: Box<[u64]>,
 }
 
 type HashCoefficients = Vec<(u64, u64)>;
-
-const LCG_MULTIPLIER: u64 = 0x5DEECE66D;
 
 pub fn compute_signatures(chunks: &[Chunk], config: &Config) -> Vec<Signature> {
     let hash_coefficients = generate_hash_coefficients(config.minhash_size);
@@ -27,22 +25,26 @@ pub fn compute_signatures(chunks: &[Chunk], config: &Config) -> Vec<Signature> {
 
 fn generate_hash_coefficients(count: usize) -> HashCoefficients {
     let mut coefficients = Vec::with_capacity(count);
-
-    let mut a: u64 = LCG_MULTIPLIER;
-    let mut b: u64 = 0xB;
+    let mut state = 0x9E3779B97F4A7C15_u64;
 
     for _ in 0..count {
-        a = a.wrapping_mul(LCG_MULTIPLIER).wrapping_add(11);
-        b = b.wrapping_mul(LCG_MULTIPLIER).wrapping_add(13);
-        coefficients.push((a | 1, b));
+        let a = splitmix64(&mut state) | 1;
+        let b = splitmix64(&mut state);
+        coefficients.push((a, b));
     }
 
     coefficients
 }
 
-fn compute_minhash(shingles: &ahash::AHashSet<u64>, coefficients: &HashCoefficients) -> Vec<u64> {
-    // One-pass algorithm: iterate shingles once, update all minimums
-    // Much better cache locality than iterating coefficients × shingles
+fn splitmix64(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E3779B97F4A7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+    z ^ (z >> 31)
+}
+
+fn compute_minhash(shingles: &ahash::AHashSet<u64>, coefficients: &HashCoefficients) -> Box<[u64]> {
     let mut mins = vec![u64::MAX; coefficients.len()];
     
     for &shingle_hash in shingles {
@@ -54,7 +56,7 @@ fn compute_minhash(shingles: &ahash::AHashSet<u64>, coefficients: &HashCoefficie
         }
     }
     
-    mins
+    mins.into_boxed_slice()
 }
 
 #[cfg(test)]

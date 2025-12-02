@@ -10,7 +10,7 @@ license = "MIT"
 clap = { version = "4", features = ["derive"] }
 
 # File system
-walkdir = "2"
+ignore = "0.4"
 
 # Parallelism
 rayon = "1"
