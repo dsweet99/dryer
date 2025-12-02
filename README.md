@@ -1,5 +1,5 @@
 # dryer
-Duplicate code detector
+*Warning: Code may shrink after use*
 
 - Finds clusters of two or more nearly-matching substrings in a code base
 - Language-agnostic
