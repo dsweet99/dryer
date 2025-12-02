@@ -42,6 +42,8 @@ pub struct Config {
     pub shingle_size: usize,
     pub minhash_size: usize,
     pub lsh_bands: usize,
+    /// Optional filter: only report duplicates involving these files
+    pub filter_files: Vec<PathBuf>,
 }
 
 impl Default for Config {
@@ -55,6 +57,7 @@ impl Default for Config {
             shingle_size: 5,
             minhash_size: 128,
             lsh_bands: 32,
+            filter_files: vec![],
         }
     }
 }

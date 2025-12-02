@@ -1,6 +1,7 @@
 use crate::edit_distance::Duplicate;
 use std::collections::HashMap;
 use std::io::{self, Write};
+use std::path::Path;
 
 /// Union-Find data structure for clustering
 struct UnionFind {
@@ -42,12 +43,62 @@ impl Location {
     }
 }
 
+/// Check if a chunk's file path matches any of the filter files
+fn matches_filter(chunk_file: &Path, scan_root: &Path, filter_files: &[impl AsRef<Path>]) -> bool {
+    if filter_files.is_empty() {
+        return true;
+    }
+    
+    for filter in filter_files {
+        let filter_path = filter.as_ref();
+        
+        // Try matching as-is
+        if chunk_file == filter_path {
+            return true;
+        }
+        
+        // Try matching filter relative to scan root
+        let full_filter = scan_root.join(filter_path);
+        if chunk_file == full_filter {
+            return true;
+        }
+        
+        // Try suffix matching (chunk path ends with filter path)
+        if chunk_file.ends_with(filter_path) {
+            return true;
+        }
+    }
+    
+    false
+}
+
+/// Filter duplicates to only include those involving at least one filter file
+fn filter_duplicates<'a>(
+    duplicates: &'a [Duplicate],
+    scan_root: &Path,
+    filter_files: &[impl AsRef<Path>],
+) -> Vec<&'a Duplicate> {
+    if filter_files.is_empty() {
+        return duplicates.iter().collect();
+    }
+    
+    duplicates
+        .iter()
+        .filter(|dup| {
+            matches_filter(&dup.chunk1.file, scan_root, filter_files)
+                || matches_filter(&dup.chunk2.file, scan_root, filter_files)
+        })
+        .collect()
+}
+
 /// Cluster duplicates and print grouped output
-pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool) {
+pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool, scan_root: &Path, filter_files: &[impl AsRef<Path>]) {
     let stdout = io::stdout();
     let mut out = stdout.lock();
 
-    if duplicates.is_empty() {
+    let filtered = filter_duplicates(duplicates, scan_root, filter_files);
+    
+    if filtered.is_empty() {
         return;
     }
 
@@ -56,7 +107,7 @@ pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool) {
     let mut idx_to_loc: Vec<Location> = Vec::new();
     let mut idx_to_text: Vec<String> = Vec::new();
 
-    for dup in duplicates {
+    for dup in &filtered {
         for (file, start, end, text) in [
             (&dup.chunk1.file, dup.chunk1.start_line, dup.chunk1.end_line, &dup.chunk1.original),
             (&dup.chunk2.file, dup.chunk2.start_line, dup.chunk2.end_line, &dup.chunk2.original),
@@ -79,7 +130,7 @@ pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool) {
     let mut uf = UnionFind::new(idx_to_loc.len());
     let mut pair_scores: HashMap<(usize, usize), f64> = HashMap::new();
     
-    for dup in duplicates {
+    for dup in &filtered {
         let loc1 = Location {
             file: dup.chunk1.file.display().to_string(),
             start: dup.chunk1.start_line,
