@@ -7,6 +7,11 @@ Duplicate code detector
 - No training; always ready to run
 - Free
 
+## Installation
+```
+cargo install dryer
+```
+
 
 ## Usage
 ```
