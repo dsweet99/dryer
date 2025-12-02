@@ -8,4 +8,18 @@ Duplicate code detector
 - Free
 
 
+## Usage
+```
+# Check all Python files
+dryer -e py .
+```
 
+```
+# Check all Rust files, show verbose output
+dryer -e rs -v .
+```
+
+- respects .gitignore
+- recursive
+
+  
