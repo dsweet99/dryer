@@ -15,13 +15,13 @@ struct Args {
     #[arg(short, long, default_value = "")]
     extensions: String,
 
-    /// Minimum chunk length in characters
+    /// Minimum chunk length in characters (filters out short chunks)
     #[arg(long, default_value = "50")]
-    min_len: usize,
+    min_chars: usize,
 
-    /// Maximum chunk length in characters
-    #[arg(long, default_value = "500")]
-    max_len: usize,
+    /// Number of lines per chunk
+    #[arg(long, default_value = "10")]
+    chunk_lines: usize,
 
     /// Maximum normalized edit distance [0.0-1.0]
     #[arg(long, default_value = "0.15")]
@@ -59,8 +59,8 @@ fn main() {
     let config = Config {
         path: args.path,
         extensions,
-        min_len: args.min_len,
-        max_len: args.max_len,
+        min_chars: args.min_chars,
+        chunk_lines: args.chunk_lines,
         edit_threshold: args.edit_threshold,
         shingle_size: args.shingle_size,
         minhash_size: args.minhash_size,

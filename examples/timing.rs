@@ -38,8 +38,8 @@ fn main() {
 
     println!("=== Dryer Timing Benchmark ===");
     println!("Path: {}", path.display());
-    println!("Config: min_len={}, max_len={}, threshold={}", 
-             config.min_len, config.max_len, config.edit_threshold);
+    println!("Config: min_chars={}, chunk_lines={}, threshold={}", 
+             config.min_chars, config.chunk_lines, config.edit_threshold);
     println!();
 
     // Warm-up run

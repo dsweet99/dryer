@@ -71,35 +71,24 @@ mod tests {
         matching_hashes as f64 / sig1.len() as f64
     }
 
+    fn shingle_set(values: &[u64]) -> ahash::AHashSet<u64> {
+        values.iter().copied().collect()
+    }
+
     #[test]
     fn test_identical_signatures() {
         let coefficients = generate_hash_coefficients(100);
-        let mut shingles = ahash::AHashSet::new();
-        shingles.insert(1);
-        shingles.insert(2);
-        shingles.insert(3);
-
+        let shingles = shingle_set(&[1, 2, 3]);
         let sig1 = compute_minhash(&shingles, &coefficients);
         let sig2 = compute_minhash(&shingles, &coefficients);
-
         assert!((estimate_jaccard_similarity(&sig1, &sig2) - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
     fn test_different_signatures() {
         let coefficients = generate_hash_coefficients(100);
-
-        let mut shingles1 = ahash::AHashSet::new();
-        shingles1.insert(1);
-        shingles1.insert(2);
-
-        let mut shingles2 = ahash::AHashSet::new();
-        shingles2.insert(100);
-        shingles2.insert(200);
-
-        let sig1 = compute_minhash(&shingles1, &coefficients);
-        let sig2 = compute_minhash(&shingles2, &coefficients);
-
+        let sig1 = compute_minhash(&shingle_set(&[1, 2]), &coefficients);
+        let sig2 = compute_minhash(&shingle_set(&[100, 200]), &coefficients);
         assert!(estimate_jaccard_similarity(&sig1, &sig2) < 0.5);
     }
 

@@ -75,8 +75,10 @@ pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool) {
         }
     }
 
-    // Union-find clustering
+    // Union-find clustering and track scores per pair
     let mut uf = UnionFind::new(idx_to_loc.len());
+    let mut pair_scores: HashMap<(usize, usize), f64> = HashMap::new();
+    
     for dup in duplicates {
         let loc1 = Location {
             file: dup.chunk1.file.display().to_string(),
@@ -91,6 +93,8 @@ pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool) {
         let idx1 = loc_to_idx[&loc1];
         let idx2 = loc_to_idx[&loc2];
         uf.union(idx1, idx2);
+        let key = (idx1.min(idx2), idx1.max(idx2));
+        pair_scores.insert(key, dup.normalized_distance);
     }
 
     // Group by cluster root
@@ -100,26 +104,41 @@ pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool) {
         clusters.entry(root).or_default().push(idx);
     }
 
+    // Calculate average score per cluster
+    let cluster_avg_score = |cluster: &[usize]| -> f64 {
+        let mut total = 0.0;
+        let mut count = 0;
+        for i in 0..cluster.len() {
+            for j in (i + 1)..cluster.len() {
+                let key = (cluster[i].min(cluster[j]), cluster[i].max(cluster[j]));
+                if let Some(&score) = pair_scores.get(&key) {
+                    total += score;
+                    count += 1;
+                }
+            }
+        }
+        if count > 0 { total / f64::from(count) } else { 0.0 }
+    };
+
     // Sort clusters by size (largest first)
     let mut cluster_list: Vec<_> = clusters.into_values().filter(|c| c.len() > 1).collect();
     cluster_list.sort_by_key(|c| std::cmp::Reverse(c.len()));
 
     // Print clusters
-    for (i, cluster) in cluster_list.iter().enumerate() {
-        writeln!(out, "=== Cluster {} ({} locations) ===", i + 1, cluster.len()).unwrap();
-        for &idx in cluster {
-            writeln!(out, "  {}", idx_to_loc[idx].display()).unwrap();
-        }
-        
+    for cluster in &cluster_list {
+        let avg_score = cluster_avg_score(cluster);
         if verbose {
-            writeln!(out, "--- sample:").unwrap();
-            let sample_idx = cluster[0];
-            for line in idx_to_text[sample_idx].lines() {
-                writeln!(out, "  {line}").unwrap();
+            writeln!(out, "=== {} locations (avg {:.3}) ===", cluster.len(), avg_score).unwrap();
+            for &idx in cluster {
+                writeln!(out, "--- {}:", idx_to_loc[idx].display()).unwrap();
+                for line in idx_to_text[idx].lines() {
+                    writeln!(out, "  {line}").unwrap();
+                }
+                writeln!(out).unwrap();
             }
+        } else {
+            let locations: Vec<_> = cluster.iter().map(|&idx| idx_to_loc[idx].display()).collect();
+            writeln!(out, "{:.3}  {}", avg_score, locations.join("  ")).unwrap();
         }
-        writeln!(out).unwrap();
     }
-
-    writeln!(out, "Total: {} clusters from {} locations", cluster_list.len(), idx_to_loc.len()).unwrap();
 }

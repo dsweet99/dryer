@@ -12,6 +12,7 @@ fn test_config() -> Config {
     Config {
         path: PathBuf::from("tests/fake_code"),
         extensions: vec!["py".to_string()],
+        chunk_lines: 6,  // Smaller chunks for test fixtures
         ..Config::default()
     }
 }
@@ -193,12 +194,8 @@ fn test_extension_filtering() {
     let config = Config {
         path: PathBuf::from("tests/fake_code"),
         extensions: vec!["rs".to_string()],
-        min_len: 10,
-        max_len: 500,
-        edit_threshold: 0.15,
-        shingle_size: 5,
-        minhash_size: 128,
-        lsh_bands: 32,
+        min_chars: 10,
+        ..Config::default()
     };
     let result = dryer::run(&config).expect("run should succeed");
 
@@ -269,10 +266,10 @@ fn assert_invalid_config(config: &Config, expected_reason: &str) {
 /// Previously, invalid configs would silently produce wrong results.
 /// Now `run()` validates config and returns an error for invalid parameters.
 #[test]
-fn test_regression_invalid_config_min_exceeds_max() {
+fn test_regression_invalid_config_chunk_lines_too_small() {
     assert_invalid_config(
-        &Config { min_len: 500, max_len: 100, ..test_config() },
-        "min_len > max_len",
+        &Config { chunk_lines: 2, ..test_config() },
+        "chunk_lines",
     );
 }
 

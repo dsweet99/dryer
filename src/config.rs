@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConfigError {
-    MinLenExceedsMaxLen { min_len: usize, max_len: usize },
+    InvalidChunkLines(usize),
     InvalidEditThreshold(f64),
     InvalidShingleSize(usize),
     MinhashSizeTooSmall { minhash_size: usize, lsh_bands: usize },
@@ -11,8 +11,8 @@ pub enum ConfigError {
 impl std::fmt::Display for ConfigError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::MinLenExceedsMaxLen { min_len, max_len } => {
-                write!(f, "min_len ({min_len}) must be less than max_len ({max_len})")
+            Self::InvalidChunkLines(n) => {
+                write!(f, "chunk_lines ({n}) must be >= 3")
             }
             Self::InvalidEditThreshold(t) => {
                 write!(f, "edit_threshold ({t}) must be in range [0.0, 1.0]")
@@ -36,8 +36,8 @@ impl std::error::Error for ConfigError {}
 pub struct Config {
     pub path: PathBuf,
     pub extensions: Vec<String>,
-    pub min_len: usize,
-    pub max_len: usize,
+    pub min_chars: usize,
+    pub chunk_lines: usize,
     pub edit_threshold: f64,
     pub shingle_size: usize,
     pub minhash_size: usize,
@@ -49,8 +49,8 @@ impl Default for Config {
         Self {
             path: PathBuf::from("."),
             extensions: vec![],
-            min_len: 50,
-            max_len: 500,
+            min_chars: 50,
+            chunk_lines: 10,
             edit_threshold: 0.15,
             shingle_size: 5,
             minhash_size: 128,
@@ -61,11 +61,8 @@ impl Default for Config {
 
 impl Config {
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.min_len >= self.max_len {
-            return Err(ConfigError::MinLenExceedsMaxLen {
-                min_len: self.min_len,
-                max_len: self.max_len,
-            });
+        if self.chunk_lines < 3 {
+            return Err(ConfigError::InvalidChunkLines(self.chunk_lines));
         }
 
         if !(0.0..=1.0).contains(&self.edit_threshold) {
@@ -97,26 +94,24 @@ mod tests {
     }
 
     #[test]
-    fn test_min_len_exceeds_max_len() {
+    fn test_chunk_lines_too_small() {
         let config = Config {
-            min_len: 100,
-            max_len: 50,
+            chunk_lines: 2,
             ..Config::default()
         };
         assert_eq!(
             config.validate(),
-            Err(ConfigError::MinLenExceedsMaxLen { min_len: 100, max_len: 50 })
+            Err(ConfigError::InvalidChunkLines(2))
         );
     }
 
     #[test]
-    fn test_min_len_equals_max_len() {
+    fn test_chunk_lines_minimum() {
         let config = Config {
-            min_len: 100,
-            max_len: 100,
+            chunk_lines: 3,
             ..Config::default()
         };
-        assert!(config.validate().is_err());
+        assert!(config.validate().is_ok());
     }
 
     #[test]
