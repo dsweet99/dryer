@@ -120,9 +120,13 @@ pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool) {
         if count > 0 { total / f64::from(count) } else { 0.0 }
     };
 
-    // Sort clusters by size (largest first)
+    // Sort clusters by average score (lowest/best first)
     let mut cluster_list: Vec<_> = clusters.into_values().filter(|c| c.len() > 1).collect();
-    cluster_list.sort_by_key(|c| std::cmp::Reverse(c.len()));
+    cluster_list.sort_by(|a, b| {
+        cluster_avg_score(a)
+            .partial_cmp(&cluster_avg_score(b))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     // Print clusters
     for cluster in &cluster_list {

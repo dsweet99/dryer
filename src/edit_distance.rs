@@ -98,23 +98,17 @@ mod tests {
     use std::sync::Arc;
 
     #[test]
-    fn test_levenshtein_identical() {
-        assert_eq!(levenshtein_bytes("hello", "hello"), 0);
-    }
-
-    #[test]
-    fn test_levenshtein_one_edit() {
-        assert_eq!(levenshtein_bytes("hello", "hallo"), 1);
-    }
-
-    #[test]
-    fn test_levenshtein_insertion() {
-        assert_eq!(levenshtein_bytes("hello", "helllo"), 1);
-    }
-
-    #[test]
-    fn test_levenshtein_deletion() {
-        assert_eq!(levenshtein_bytes("hello", "helo"), 1);
+    fn test_levenshtein_distances() {
+        // (input_a, input_b, expected_distance)
+        let cases = [
+            ("hello", "hello", 0),  // identical
+            ("hello", "hallo", 1),  // one substitution
+            ("hello", "helllo", 1), // one insertion
+            ("hello", "helo", 1),   // one deletion
+        ];
+        for (a, b, expected) in cases {
+            assert_eq!(levenshtein_bytes(a, b), expected, "{a} vs {b}");
+        }
     }
 
     #[test]

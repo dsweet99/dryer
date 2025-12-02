@@ -113,31 +113,29 @@ mod tests {
         assert!(candidates.is_empty());
     }
 
+    /// Helper: find candidates using standard (8, 4) config
+    fn candidates_8_4(sig_data: &[Vec<u64>]) -> Vec<CandidatePair> {
+        let sigs: Vec<_> = sig_data.iter().map(|v| make_sig(v.clone())).collect();
+        find_candidates(&sigs, &config_with_lsh(8, 4))
+    }
+
     #[test]
     fn test_partial_band_match_creates_candidate() {
-        let config = config_with_lsh(8, 4);
-
-        let sigs = vec![
-            make_sig(vec![1, 2, 3, 4, 5, 6, 7, 8]),
-            make_sig(vec![1, 2, 99, 99, 99, 99, 99, 99]),
-        ];
-
-        let candidates = find_candidates(&sigs, &config);
-
+        // First two hash values match (one band) → should be candidates
+        let candidates = candidates_8_4(&[
+            vec![1, 2, 3, 4, 5, 6, 7, 8],
+            vec![1, 2, 99, 99, 99, 99, 99, 99],
+        ]);
         assert!(candidates.contains(&CandidatePair { idx1: 0, idx2: 1 }));
     }
 
     #[test]
     fn test_no_band_match_no_candidate() {
-        let config = config_with_lsh(8, 4);
-
-        let sigs = vec![
-            make_sig(vec![1, 2, 3, 4, 5, 6, 7, 8]),
-            make_sig(vec![1, 99, 3, 99, 5, 99, 7, 99]),
-        ];
-
-        let candidates = find_candidates(&sigs, &config);
-
+        // No two consecutive values match → no band match → not candidates
+        let candidates = candidates_8_4(&[
+            vec![1, 2, 3, 4, 5, 6, 7, 8],
+            vec![1, 99, 3, 99, 5, 99, 7, 99],
+        ]);
         assert!(!candidates.contains(&CandidatePair { idx1: 0, idx2: 1 }));
     }
 
