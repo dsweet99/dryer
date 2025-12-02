@@ -125,102 +125,63 @@ mod tests {
         assert!((normalized - 0.2).abs() < 0.001);
     }
 
+    use crate::test_utils::{config_with_threshold, make_chunk};
+
+    /// Helper to create a Chunk with just line range (for `ranges_overlap` tests)
+    fn chunk_range(start: usize, end: usize) -> Chunk {
+        Chunk {
+            file: Arc::new(PathBuf::from("test.py")),
+            start_line: start,
+            end_line: end,
+            original: String::new(),
+            normalized: String::new(),
+        }
+    }
+
     #[test]
     fn test_ranges_overlap_disjoint() {
-        let c1 = Chunk {
-            file: Arc::new(PathBuf::from("test.py")),
-            start_line: 1,
-            end_line: 5,
-            original: String::new(),
-            normalized: String::new(),
-        };
-        let c2 = Chunk {
-            file: Arc::new(PathBuf::from("test.py")),
-            start_line: 10,
-            end_line: 15,
-            original: String::new(),
-            normalized: String::new(),
-        };
+        let (c1, c2) = (chunk_range(1, 5), chunk_range(10, 15));
         assert!(!ranges_overlap(&c1, &c2));
         assert!(!ranges_overlap(&c2, &c1));
     }
 
     #[test]
     fn test_ranges_overlap_touching() {
-        let c1 = Chunk {
-            file: Arc::new(PathBuf::from("test.py")),
-            start_line: 1,
-            end_line: 5,
-            original: String::new(),
-            normalized: String::new(),
-        };
-        let c2 = Chunk {
-            file: Arc::new(PathBuf::from("test.py")),
-            start_line: 5,
-            end_line: 10,
-            original: String::new(),
-            normalized: String::new(),
-        };
+        let (c1, c2) = (chunk_range(1, 5), chunk_range(5, 10));
         assert!(ranges_overlap(&c1, &c2));
     }
 
     #[test]
     fn test_ranges_overlap_fully_contained() {
-        let c1 = Chunk {
-            file: Arc::new(PathBuf::from("test.py")),
-            start_line: 1,
-            end_line: 20,
-            original: String::new(),
-            normalized: String::new(),
-        };
-        let c2 = Chunk {
-            file: Arc::new(PathBuf::from("test.py")),
-            start_line: 5,
-            end_line: 10,
-            original: String::new(),
-            normalized: String::new(),
-        };
+        let (c1, c2) = (chunk_range(1, 20), chunk_range(5, 10));
         assert!(ranges_overlap(&c1, &c2));
         assert!(ranges_overlap(&c2, &c1));
     }
 
     #[test]
     fn test_ranges_overlap_partial() {
-        let c1 = Chunk {
-            file: Arc::new(PathBuf::from("test.py")),
-            start_line: 1,
-            end_line: 10,
-            original: String::new(),
-            normalized: String::new(),
-        };
-        let c2 = Chunk {
-            file: Arc::new(PathBuf::from("test.py")),
-            start_line: 8,
-            end_line: 15,
-            original: String::new(),
-            normalized: String::new(),
-        };
+        let (c1, c2) = (chunk_range(1, 10), chunk_range(8, 15));
         assert!(ranges_overlap(&c1, &c2));
     }
-
-    use crate::test_utils::{config_with_threshold, make_chunk};
 
     fn mock_signatures(count: usize) -> Vec<Signature> {
         (0..count).map(|_| Signature { hashes: vec![1, 2, 3, 4].into_boxed_slice() }).collect()
     }
 
-    #[test]
-    fn test_verify_candidates_finds_identical() {
-        let chunks = vec![
-            make_chunk("a.py", 1, 5, "hello world"),
-            make_chunk("b.py", 1, 5, "hello world"),
-        ];
-        let signatures = mock_signatures(2);
+    /// Helper to run verification on a pair of chunks with default test setup
+    fn verify_pair(chunks: &[Chunk]) -> Vec<Duplicate> {
+        let signatures = mock_signatures(chunks.len());
         let candidates = vec![CandidatePair { idx1: 0, idx2: 1 }];
         let config = config_with_threshold(0.15);
+        verify_candidates(chunks, &signatures, &candidates, &config)
+    }
 
-        let dups = verify_candidates(&chunks, &signatures, &candidates, &config);
-
+    #[test]
+    fn test_verify_candidates_finds_identical() {
+        let dups = verify_pair(&[
+            make_chunk("a.py", 1, 5, "hello world"),
+            make_chunk("b.py", 1, 5, "hello world"),
+        ]);
         assert_eq!(dups.len(), 1);
         assert_eq!(dups[0].edit_distance, 0);
         assert!(dups[0].normalized_distance.abs() < f64::EPSILON);
@@ -228,16 +189,10 @@ mod tests {
 
     #[test]
     fn test_verify_candidates_finds_similar() {
-        let chunks = vec![
+        let dups = verify_pair(&[
             make_chunk("a.py", 1, 5, "hello world"),
             make_chunk("b.py", 1, 5, "hallo world"),
-        ];
-        let signatures = mock_signatures(2);
-        let candidates = vec![CandidatePair { idx1: 0, idx2: 1 }];
-        let config = config_with_threshold(0.15);
-
-        let dups = verify_candidates(&chunks, &signatures, &candidates, &config);
-
+        ]);
         assert_eq!(dups.len(), 1);
         assert_eq!(dups[0].edit_distance, 1);
         assert!((dups[0].normalized_distance - 1.0 / 11.0).abs() < 0.01);
@@ -245,46 +200,28 @@ mod tests {
 
     #[test]
     fn test_verify_candidates_filters_by_threshold() {
-        let chunks = vec![
+        let dups = verify_pair(&[
             make_chunk("a.py", 1, 5, "hello"),
             make_chunk("b.py", 1, 5, "world"),
-        ];
-        let signatures = mock_signatures(2);
-        let candidates = vec![CandidatePair { idx1: 0, idx2: 1 }];
-        let config = config_with_threshold(0.15);
-
-        let dups = verify_candidates(&chunks, &signatures, &candidates, &config);
-
+        ]);
         assert!(dups.is_empty());
     }
 
     #[test]
     fn test_verify_candidates_skips_overlapping_same_file() {
-        let chunks = vec![
+        let dups = verify_pair(&[
             make_chunk("same.py", 1, 10, "hello world"),
             make_chunk("same.py", 5, 15, "hello world"),
-        ];
-        let signatures = mock_signatures(2);
-        let candidates = vec![CandidatePair { idx1: 0, idx2: 1 }];
-        let config = config_with_threshold(0.15);
-
-        let dups = verify_candidates(&chunks, &signatures, &candidates, &config);
-
+        ]);
         assert!(dups.is_empty());
     }
 
     #[test]
     fn test_verify_candidates_allows_nonoverlapping_same_file() {
-        let chunks = vec![
+        let dups = verify_pair(&[
             make_chunk("same.py", 1, 5, "hello world"),
             make_chunk("same.py", 10, 15, "hello world"),
-        ];
-        let signatures = mock_signatures(2);
-        let candidates = vec![CandidatePair { idx1: 0, idx2: 1 }];
-        let config = config_with_threshold(0.15);
-
-        let dups = verify_candidates(&chunks, &signatures, &candidates, &config);
-
+        ]);
         assert_eq!(dups.len(), 1);
     }
 
@@ -294,23 +231,16 @@ mod tests {
         let signatures: Vec<Signature> = vec![];
         let candidates: Vec<CandidatePair> = vec![];
         let config = config_with_threshold(0.15);
-
         let dups = verify_candidates(&chunks, &signatures, &candidates, &config);
         assert!(dups.is_empty());
     }
 
     #[test]
     fn test_verify_candidates_handles_empty_strings() {
-        let chunks = vec![
+        let dups = verify_pair(&[
             make_chunk("a.py", 1, 1, ""),
             make_chunk("b.py", 1, 1, ""),
-        ];
-        let signatures = mock_signatures(2);
-        let candidates = vec![CandidatePair { idx1: 0, idx2: 1 }];
-        let config = config_with_threshold(0.15);
-
-        let dups = verify_candidates(&chunks, &signatures, &candidates, &config);
-
+        ]);
         assert_eq!(dups.len(), 1);
         assert!(dups[0].normalized_distance.abs() < f64::EPSILON);
     }

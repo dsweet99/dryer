@@ -259,64 +259,44 @@ fn test_unique_algorithms_not_matched() {
 // REGRESSION TESTS FOR FIXED BUGS
 // =============================================================================
 
+/// Helper to assert that an invalid config causes `run()` to fail
+fn assert_invalid_config(config: &Config, expected_reason: &str) {
+    let result = dryer::run(config);
+    assert!(result.is_err(), "run() should fail: {expected_reason}");
+}
+
 /// Regression test for Bug #2: Parameter validation
 /// Previously, invalid configs would silently produce wrong results.
 /// Now `run()` validates config and returns an error for invalid parameters.
 #[test]
 fn test_regression_invalid_config_min_exceeds_max() {
-    let config = Config {
-        min_len: 500,
-        max_len: 100, // Invalid: min > max
-        ..test_config()
-    };
-
-    let result = dryer::run(&config);
-    assert!(
-        result.is_err(),
-        "run() should fail when min_len > max_len"
+    assert_invalid_config(
+        &Config { min_len: 500, max_len: 100, ..test_config() },
+        "min_len > max_len",
     );
 }
 
 #[test]
 fn test_regression_invalid_config_edit_threshold_out_of_range() {
-    let config = Config {
-        edit_threshold: 1.5, // Invalid: > 1.0
-        ..test_config()
-    };
-
-    let result = dryer::run(&config);
-    assert!(
-        result.is_err(),
-        "run() should fail when edit_threshold > 1.0"
+    assert_invalid_config(
+        &Config { edit_threshold: 1.5, ..test_config() },
+        "edit_threshold > 1.0",
     );
 }
 
 #[test]
 fn test_regression_invalid_config_shingle_size_zero() {
-    let config = Config {
-        shingle_size: 0, // Invalid: must be > 0
-        ..test_config()
-    };
-
-    let result = dryer::run(&config);
-    assert!(
-        result.is_err(),
-        "run() should fail when shingle_size is 0"
+    assert_invalid_config(
+        &Config { shingle_size: 0, ..test_config() },
+        "shingle_size is 0",
     );
 }
 
 #[test]
 fn test_regression_invalid_config_minhash_less_than_bands() {
-    let config = Config {
-        minhash_size: 8,
-        lsh_bands: 32, // Invalid: minhash_size < lsh_bands
-        ..test_config()
-    };
-
-    let result = dryer::run(&config);
-    assert!(
-        result.is_err(),
-        "run() should fail when minhash_size < lsh_bands"
+    assert_invalid_config(
+        &Config { minhash_size: 8, lsh_bands: 32, ..test_config() },
+        "minhash_size < lsh_bands",
     );
 }
 

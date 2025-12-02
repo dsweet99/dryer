@@ -16,7 +16,7 @@ struct Args {
     extensions: String,
 
     /// Minimum chunk length in characters
-    #[arg(long, default_value = "10")]
+    #[arg(long, default_value = "50")]
     min_len: usize,
 
     /// Maximum chunk length in characters
@@ -38,6 +38,10 @@ struct Args {
     /// Number of LSH bands
     #[arg(long, default_value = "32")]
     lsh_bands: usize,
+
+    /// Show the matched code strings
+    #[arg(short, long)]
+    verbose: bool,
 }
 
 fn main() {
@@ -62,10 +66,10 @@ fn main() {
         minhash_size: args.minhash_size,
         lsh_bands: args.lsh_bands,
     };
-
+    
     match dryer::run(&config) {
         Ok(result) => {
-            output::print_markdown(&result.duplicates, result.file_count, result.chunk_count);
+            output::print_duplicates(&result.duplicates, args.verbose);
         }
         Err(e) => {
             eprintln!("Error: {e}");

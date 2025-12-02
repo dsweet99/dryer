@@ -79,6 +79,7 @@ mod tests {
 
     fn test_config() -> Config {
         Config {
+            min_len: 10,  // Lower than default for short test fixtures
             max_len: 100,
             ..Config::default()
         }

@@ -49,7 +49,7 @@ impl Default for Config {
         Self {
             path: PathBuf::from("."),
             extensions: vec![],
-            min_len: 10,
+            min_len: 50,
             max_len: 500,
             edit_threshold: 0.15,
             shingle_size: 5,

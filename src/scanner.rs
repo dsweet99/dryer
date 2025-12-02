@@ -64,19 +64,26 @@ mod tests {
         tempfile::tempdir().unwrap()
     }
 
+    /// Helper: create files and assert `scan_files` returns expected count
+    fn assert_scan_count(file_specs: &[(&str, &str)], extensions: &[&str], expected: usize) {
+        let dir = create_temp_dir();
+        for (name, content) in file_specs {
+            fs::write(dir.path().join(name), content).unwrap();
+        }
+        let exts: Vec<String> = extensions.iter().map(|s| (*s).to_string()).collect();
+        let files = scan_files(dir.path(), &exts).unwrap();
+        assert_eq!(files.len(), expected);
+    }
+
     #[test]
     fn test_scan_empty_directory() {
-        let dir = create_temp_dir();
-        let files = scan_files(dir.path(), &[]).unwrap();
-        assert!(files.is_empty());
+        assert_scan_count(&[], &[], 0);
     }
 
     #[test]
     fn test_scan_single_file() {
         let dir = create_temp_dir();
-        let file_path = dir.path().join("test.py");
-        fs::write(&file_path, "def foo(): pass").unwrap();
-
+        fs::write(dir.path().join("test.py"), "def foo(): pass").unwrap();
         let files = scan_files(dir.path(), &[]).unwrap();
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].content, "def foo(): pass");
@@ -101,19 +108,16 @@ mod tests {
 
     #[test]
     fn test_extension_filter_empty_means_all() {
-        let dir = create_temp_dir();
-        fs::write(dir.path().join("test.py"), "python").unwrap();
-        fs::write(dir.path().join("test.rs"), "rust").unwrap();
-        fs::write(dir.path().join("test.txt"), "text").unwrap();
-
-        let files = scan_files(dir.path(), &[]).unwrap();
-        assert_eq!(files.len(), 3);
+        assert_scan_count(
+            &[("test.py", "python"), ("test.rs", "rust"), ("test.txt", "text")],
+            &[],
+            3,
+        );
     }
 
     #[test]
     fn test_skips_binary_files() {
         let dir = create_temp_dir();
-
         fs::write(dir.path().join("valid.txt"), "hello world").unwrap();
 
         let binary_path = dir.path().join("binary.bin");
@@ -121,7 +125,6 @@ mod tests {
         f.write_all(&[0x80, 0x81, 0x82, 0xFF, 0xFE]).unwrap();
 
         let files = scan_files(dir.path(), &[]).unwrap();
-
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].content, "hello world");
     }
@@ -141,16 +144,8 @@ mod tests {
 
     #[test]
     fn test_file_without_extension() {
-        let dir = create_temp_dir();
-        fs::write(dir.path().join("Makefile"), "all: build").unwrap();
-        fs::write(dir.path().join("test.py"), "python").unwrap();
-
-        let files = scan_files(dir.path(), &[]).unwrap();
-        assert_eq!(files.len(), 2);
-
-        let extensions = vec!["py".to_string()];
-        let files = scan_files(dir.path(), &extensions).unwrap();
-        assert_eq!(files.len(), 1);
+        assert_scan_count(&[("Makefile", "all: build"), ("test.py", "python")], &[], 2);
+        assert_scan_count(&[("Makefile", "all: build"), ("test.py", "python")], &["py"], 1);
     }
 
     #[test]
