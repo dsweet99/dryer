@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: clippy
+        name: clippy
+        entry: scripts/pre-commit-clippy.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+
