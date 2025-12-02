@@ -103,7 +103,7 @@ fn filter_duplicates<'a>(
 
 /// Cluster duplicates and print grouped output
 #[allow(clippy::too_many_lines)] // Logic is cohesive; splitting would harm readability
-pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool, scan_root: &Path, filter_files: &[impl AsRef<Path>]) {
+pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool, data_only: bool, scan_root: &Path, filter_files: &[impl AsRef<Path>]) {
     let stdout = io::stdout();
     let mut out = stdout.lock();
 
@@ -215,22 +215,34 @@ pub fn print_duplicates(duplicates: &[Duplicate], verbose: bool, scan_root: &Pat
     });
 
     // Print clusters
-    for cluster in &cluster_list {
+    for (cluster_idx, cluster) in cluster_list.iter().enumerate() {
         let score = cluster_score(cluster);
         if verbose {
-            writeln!(out, "=== {} locations (score {:.3}) ===", cluster.len(), score).unwrap();
-            for &idx in cluster {
-                let data = &idx_to_data[idx];
-                let loc_score = compute_score(idx, cluster);
-                writeln!(out, "--- {} (score {:.3}):", data.loc.display(), loc_score).unwrap();
-                for line in data.text.lines() {
-                    writeln!(out, "  {line}").unwrap();
-                }
-                writeln!(out).unwrap();
+            if data_only {
+                writeln!(out, "CLUSTER_{cluster_idx}: num_matches = {}", cluster.len()).unwrap();
+            } else {
+                writeln!(out, "CLUSTER_{cluster_idx}: num_matches = {} score = {score:.3}", cluster.len()).unwrap();
             }
+            for (match_idx, &idx) in cluster.iter().enumerate() {
+                let data = &idx_to_data[idx];
+                if data_only {
+                    writeln!(out, "MATCH_{match_idx}: file = {}", data.loc.display()).unwrap();
+                } else {
+                    let loc_score = compute_score(idx, cluster);
+                    writeln!(out, "MATCH_{match_idx}: file = {} score = {loc_score:.3}", data.loc.display()).unwrap();
+                }
+                for line in data.text.lines() {
+                    writeln!(out, "MATCH_{match_idx}: {line}").unwrap();
+                }
+            }
+            writeln!(out).unwrap();
         } else {
             let locations: Vec<_> = cluster.iter().map(|&idx| idx_to_data[idx].loc.display()).collect();
-            writeln!(out, "{:.3}  {}", score, locations.join("  ")).unwrap();
+            if data_only {
+                writeln!(out, "CLUSTER_{cluster_idx}: {}", locations.join("  ")).unwrap();
+            } else {
+                writeln!(out, "CLUSTER_{cluster_idx}: {score:.3}  {}", locations.join("  ")).unwrap();
+            }
         }
     }
 }

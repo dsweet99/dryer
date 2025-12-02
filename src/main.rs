@@ -48,6 +48,10 @@ struct Args {
     /// Show the matched code strings
     #[arg(short, long)]
     verbose: bool,
+
+    /// Omit scores from output (data-only mode)
+    #[arg(short, long)]
+    data: bool,
 }
 
 fn main() {
@@ -76,7 +80,7 @@ fn main() {
     
     match dryer::run(&config) {
         Ok(result) => {
-            output::print_duplicates(&result.duplicates, args.verbose, &args.path, &config.filter_files);
+            output::print_duplicates(&result.duplicates, args.verbose, args.data, &args.path, &config.filter_files);
         }
         Err(e) => {
             eprintln!("Error: {e}");
@@ -140,5 +144,23 @@ mod tests {
         assert!(args.verbose);
         assert_eq!(args.filter_files.len(), 1);
         assert!((args.edit_threshold - 0.2).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_data_flag() {
+        let args = Args::try_parse_from(["dryer", ".", "--data"])
+            .expect("should parse successfully");
+        
+        assert!(args.data);
+        assert!(!args.verbose);
+    }
+
+    #[test]
+    fn test_data_and_verbose_flags() {
+        let args = Args::try_parse_from(["dryer", ".", "--data", "--verbose"])
+            .expect("should parse successfully");
+        
+        assert!(args.data);
+        assert!(args.verbose);
     }
 }
