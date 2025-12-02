@@ -1,10 +1,10 @@
 [package]
 name = "dryer"
 version = "0.1.0"
-edition = "2021"
-description = "Fast fuzzy duplicate detection for source code"
+edition = "2024"
+description = "Duplicate code detector"
 license = "MIT"
-repository = "https://github.com/dsweet2/dryer"
+repository = "https://github.com/dsweet99/dryer"
 keywords = ["duplicate", "detection", "code", "lsh", "minhash"]
 categories = ["command-line-utilities", "development-tools"]
 
