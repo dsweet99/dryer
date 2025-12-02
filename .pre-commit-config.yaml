@@ -8,3 +8,9 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: ruff
+        name: ruff
+        entry: scripts/pre-commit-ruff.sh
+        language: system
+        pass_filenames: false
+        always_run: true
