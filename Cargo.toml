@@ -25,6 +25,13 @@ rustc-hash = "2"
 # Edit distance (SIMD-accelerated)
 triple_accel = "0.4"
 
+# Config file
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# Home directory
+dirs = "6"
+
 [dev-dependencies]
 tempfile = "3"
 

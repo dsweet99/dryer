@@ -12,6 +12,8 @@ pub struct Chunk {
     pub file: Arc<PathBuf>,
     pub start_line: LineNumber,
     pub end_line: LineNumber,
+    /// Character offset from start of file
+    pub file_offset: usize,
     pub original: String,
     pub normalized: String,
 }
@@ -29,6 +31,14 @@ fn generate_file_chunks(file: &SourceFile, config: &Config) -> Vec<Chunk> {
 
     if lines.is_empty() {
         return chunks;
+    }
+
+    // Precompute character offset for each line start
+    let mut line_offsets: Vec<usize> = Vec::with_capacity(lines.len() + 1);
+    let mut offset = 0;
+    for line in &lines {
+        line_offsets.push(offset);
+        offset += line.len() + 1; // +1 for newline
     }
 
     let chunk_lines = config.chunk_lines;
@@ -49,11 +59,13 @@ fn generate_file_chunks(file: &SourceFile, config: &Config) -> Vec<Chunk> {
         if normalized.chars().count() >= config.min_chars {
             let one_indexed_start = zero_indexed_start + 1;
             let one_indexed_end_inclusive = zero_indexed_end_exclusive;
+            let file_offset = line_offsets[zero_indexed_start];
 
             chunks.push(Chunk {
                 file: Arc::clone(&file.path),
                 start_line: one_indexed_start,
                 end_line: one_indexed_end_inclusive,
+                file_offset,
                 original,
                 normalized,
             });
@@ -205,6 +217,72 @@ mod tests {
                 "Chunk starting at line {} should contain '{}', got '{}'",
                 chunk.start_line, expected_first, first_line
             );
+        }
+    }
+
+    #[test]
+    fn test_file_offset_first_chunk_is_zero() {
+        let file = source_file("test.py", "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10");
+        let chunks = generate_file_chunks(&file, &config_with_min_chars(5));
+        
+        assert!(!chunks.is_empty());
+        assert_eq!(chunks[0].file_offset, 0, "First chunk should start at offset 0");
+    }
+
+    #[test]
+    fn test_file_offset_increases_with_lines() {
+        // Each line is "lineN\n" where N is 1-10
+        // line1 = 5 chars + newline = 6
+        // line2 starts at offset 6
+        // line3 starts at offset 12, etc.
+        let file = source_file("test.py", "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10");
+        let config = Config {
+            min_chars: 5,
+            chunk_lines: 3,
+            ..Config::default()
+        };
+        let chunks = generate_file_chunks(&file, &config);
+        
+        assert!(chunks.len() >= 2, "Should have at least 2 chunks");
+        
+        // First chunk starts at line 1 (offset 0)
+        assert_eq!(chunks[0].file_offset, 0);
+        assert_eq!(chunks[0].start_line, 1);
+        
+        // With chunk_lines=3 and overlap of 1, second chunk starts at line 2
+        // "line1\n" = 6 chars, so line 2 starts at offset 6
+        if chunks.len() > 1 && chunks[1].start_line == 2 {
+            assert_eq!(chunks[1].file_offset, 6, "Line 2 should start at offset 6");
+        }
+    }
+
+    #[test]
+    fn test_file_offset_with_varying_line_lengths() {
+        // Lines of different lengths
+        let content = "a\nbb\nccc\ndddd\neeeee\nffffff\nggggggg\nhhhhhhhh\niiiiiiiii\njjjjjjjjjj";
+        let file = source_file("test.py", content);
+        let config = Config {
+            min_chars: 5,
+            chunk_lines: 3,
+            ..Config::default()
+        };
+        let chunks = generate_file_chunks(&file, &config);
+        
+        // Line offsets: 0, 2, 5, 9, 14, 20, 27, 35, 44, 54
+        // (each line length + 1 for newline, accumulated)
+        if !chunks.is_empty() {
+            assert_eq!(chunks[0].file_offset, 0);
+        }
+        
+        // Find chunk starting at line 3 (offset 5: "a\n" + "bb\n" = 2 + 3 = 5)
+        for chunk in &chunks {
+            if chunk.start_line == 3 {
+                assert_eq!(chunk.file_offset, 5, "Line 3 should start at offset 5");
+            }
+            if chunk.start_line == 5 {
+                // "a\nbb\nccc\ndddd\n" = 2 + 3 + 4 + 5 = 14
+                assert_eq!(chunk.file_offset, 14, "Line 5 should start at offset 14");
+            }
         }
     }
 }

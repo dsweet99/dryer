@@ -1,3 +1,6 @@
+// Allow multiple versions of transitive dependencies (getrandom 0.2 vs 0.3)
+#![allow(clippy::multiple_crate_versions)]
+
 use clap::Parser;
 use std::path::PathBuf;
 

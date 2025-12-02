@@ -1,3 +1,6 @@
+// Allow multiple versions of transitive dependencies (getrandom 0.2 vs 0.3)
+#![allow(clippy::multiple_crate_versions)]
+
 pub mod chunker;
 pub mod config;
 pub mod edit_distance;
@@ -6,6 +9,7 @@ pub mod minhash;
 pub mod normalizer;
 pub mod output;
 pub mod scanner;
+pub mod scoring;
 pub mod shingling;
 
 use config::Config;
@@ -65,6 +69,7 @@ pub mod test_utils {
             file: Arc::new(PathBuf::from(file)),
             start_line: start,
             end_line: end,
+            file_offset: 0,
             original: text.to_string(),
             normalized: text.to_string(),
         }

@@ -127,6 +127,7 @@ mod tests {
             file: Arc::new(PathBuf::from("test.py")),
             start_line: start,
             end_line: end,
+            file_offset: 0,
             original: String::new(),
             normalized: String::new(),
         }
