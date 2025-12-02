@@ -10,18 +10,31 @@ pub mod shingling;
 
 use config::Config;
 
-pub fn run(config: &Config) -> Result<Vec<edit_distance::Duplicate>, Box<dyn std::error::Error>> {
+/// Result of running duplicate detection
+pub struct RunResult {
+    pub duplicates: Vec<edit_distance::Duplicate>,
+    pub file_count: usize,
+    pub chunk_count: usize,
+}
+
+pub fn run(config: &Config) -> Result<RunResult, Box<dyn std::error::Error>> {
     config.validate()?;
 
     let files = scanner::scan_files(&config.path, &config.extensions)?;
-    eprintln!("Found {} files", files.len());
+    let file_count = files.len();
+    eprintln!("Found {file_count} files");
 
     let chunks = chunker::generate_chunks(&files, config);
-    eprintln!("Generated {} chunks", chunks.len());
+    let chunk_count = chunks.len();
+    eprintln!("Generated {chunk_count} chunks");
 
     if chunks.is_empty() {
         eprintln!("No chunks to analyze");
-        return Ok(vec![]);
+        return Ok(RunResult {
+            duplicates: vec![],
+            file_count,
+            chunk_count,
+        });
     }
 
     let signatures = minhash::compute_signatures(&chunks, config);
@@ -33,7 +46,11 @@ pub fn run(config: &Config) -> Result<Vec<edit_distance::Duplicate>, Box<dyn std
     let duplicates = edit_distance::verify_candidates(&chunks, &signatures, &candidates, config);
     eprintln!("Verified {} duplicates", duplicates.len());
 
-    Ok(duplicates)
+    Ok(RunResult {
+        duplicates,
+        file_count,
+        chunk_count,
+    })
 }
 
 #[cfg(test)]

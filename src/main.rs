@@ -38,10 +38,6 @@ struct Args {
     /// Number of LSH bands
     #[arg(long, default_value = "32")]
     lsh_bands: usize,
-
-    /// Output as JSON instead of diff
-    #[arg(long, default_value = "false")]
-    json: bool,
 }
 
 fn main() {
@@ -65,21 +61,11 @@ fn main() {
         shingle_size: args.shingle_size,
         minhash_size: args.minhash_size,
         lsh_bands: args.lsh_bands,
-        json_output: args.json,
     };
 
-    let json_output = config.json_output;
-    
     match dryer::run(&config) {
-        Ok(duplicates) => {
-            if json_output {
-                if let Err(e) = output::print_json(&duplicates) {
-                    eprintln!("Error: {e}");
-                    std::process::exit(1);
-                }
-            } else {
-                output::print_diff(&duplicates);
-            }
+        Ok(result) => {
+            output::print_markdown(&result.duplicates, result.file_count, result.chunk_count);
         }
         Err(e) => {
             eprintln!("Error: {e}");

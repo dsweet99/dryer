@@ -33,13 +33,7 @@ fn main() {
     let config = Config {
         path: path.clone(),
         extensions: vec!["py".to_string()],
-        min_len: 10,
-        max_len: 500,
-        edit_threshold: 0.15,
-        shingle_size: 5,
-        minhash_size: 128,
-        lsh_bands: 32,
-        json_output: false,
+        ..Config::default()
     };
 
     println!("=== Dryer Timing Benchmark ===");
