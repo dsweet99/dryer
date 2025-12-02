@@ -1,5 +1,5 @@
 # dryer
-*Warning: Code may shrink after use*
+*Warning: Code may shrink in dryer*
 
 - Finds clusters of two or more nearly-matching substrings in a code base
 - Language-agnostic
