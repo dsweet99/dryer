@@ -8,6 +8,34 @@ pub mod output;
 pub mod scanner;
 pub mod shingling;
 
+use config::Config;
+
+pub fn run(config: &Config) -> Result<Vec<edit_distance::Duplicate>, Box<dyn std::error::Error>> {
+    config.validate()?;
+
+    let files = scanner::scan_files(&config.path, &config.extensions)?;
+    eprintln!("Found {} files", files.len());
+
+    let chunks = chunker::generate_chunks(&files, config);
+    eprintln!("Generated {} chunks", chunks.len());
+
+    if chunks.is_empty() {
+        eprintln!("No chunks to analyze");
+        return Ok(vec![]);
+    }
+
+    let signatures = minhash::compute_signatures(&chunks, config);
+    eprintln!("Computed {} signatures", signatures.len());
+
+    let candidates = lsh::find_candidates(&signatures, config);
+    eprintln!("Found {} candidate pairs", candidates.len());
+
+    let duplicates = edit_distance::verify_candidates(&chunks, &signatures, &candidates, config);
+    eprintln!("Verified {} duplicates", duplicates.len());
+
+    Ok(duplicates)
+}
+
 #[cfg(test)]
 pub mod test_utils {
     use crate::chunker::Chunk;
@@ -31,8 +59,8 @@ pub mod test_utils {
 
     pub fn config_with_minhash(minhash_size: usize, shingle_size: usize) -> Config {
         Config {
-            minhash_size,
             shingle_size,
+            minhash_size,
             ..Config::default()
         }
     }
@@ -51,32 +79,4 @@ pub mod test_utils {
             ..Config::default()
         }
     }
-}
-
-use config::Config;
-
-pub fn run(config: Config) -> Result<Vec<edit_distance::Duplicate>, Box<dyn std::error::Error>> {
-    config.validate()?;
-
-    let files = scanner::scan_files(&config.path, &config.extensions)?;
-    eprintln!("Found {} files", files.len());
-
-    let chunks = chunker::generate_chunks(&files, &config);
-    eprintln!("Generated {} chunks", chunks.len());
-
-    if chunks.is_empty() {
-        eprintln!("No chunks to analyze");
-        return Ok(vec![]);
-    }
-
-    let signatures = minhash::compute_signatures(&chunks, &config);
-    eprintln!("Computed {} signatures", signatures.len());
-
-    let candidates = lsh::find_candidates(&signatures, &config);
-    eprintln!("Found {} candidate pairs", candidates.len());
-
-    let duplicates = edit_distance::verify_candidates(&chunks, &signatures, &candidates, &config);
-    eprintln!("Verified {} duplicates", duplicates.len());
-
-    Ok(duplicates)
 }

@@ -1,16 +1,16 @@
-//! Integration tests validating duplicate detection against tests/fake_code fixtures.
+//! Integration tests validating duplicate detection against `tests/fake_code` fixtures.
 //!
 //! These tests verify that the dryer tool correctly identifies the duplicates
-//! documented in tests/fake_code/EXPECTED_DUPLICATES.md
+//! documented in `tests/fake_code/EXPECTED_DUPLICATES.md`
 
 use dryer::config::Config;
 use dryer::edit_distance::Duplicate;
 use std::path::PathBuf;
 
-/// Create a config targeting the fake_code directory
+/// Create a config targeting the `fake_code` directory
 fn test_config() -> Config {
     Config {
-        path: PathBuf::from("../tests/fake_code"),
+        path: PathBuf::from("tests/fake_code"),
         extensions: vec!["py".to_string()],
         min_len: 10,
         max_len: 500,
@@ -43,7 +43,7 @@ fn has_same_file_duplicate(duplicates: &[Duplicate], file: &str) -> bool {
 #[test]
 fn test_finds_duplicates_in_fake_code() {
     let config = test_config();
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     // Should find some duplicates
     assert!(
@@ -56,7 +56,7 @@ fn test_finds_duplicates_in_fake_code() {
 fn test_cross_file_exact_duplicate_validate_email() {
     // EXPECTED_DUPLICATES.md: utils.py:validate_email == models.py:validate_email (exact copy)
     let config = test_config();
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     assert!(
         has_duplicate_between(&duplicates, "utils.py", "models.py"),
@@ -69,7 +69,7 @@ fn test_cross_file_near_duplicate_validate_phone() {
     // EXPECTED_DUPLICATES.md: utils.py:validate_phone vs models.py:validate_phone_number
     // Variable rename phone -> phone_number, ~0.05 distance
     let config = test_config();
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     // This is a near-duplicate, should be caught with 0.15 threshold
     assert!(
@@ -83,7 +83,7 @@ fn test_cross_file_near_duplicate_calculate_order_total() {
     // EXPECTED_DUPLICATES.md: utils.py:calculate_order_total vs services.py:compute_order_total
     // Renamed params, variable names, ~0.08 distance
     let config = test_config();
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     assert!(
         has_duplicate_between(&duplicates, "utils.py", "services.py"),
@@ -96,7 +96,7 @@ fn test_same_file_duplicate_process_user_data() {
     // EXPECTED_DUPLICATES.md: utils.py has process_user_data_v1 and _v2
     // Only diff is .lower() vs .upper()
     let config = test_config();
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     assert!(
         has_same_file_duplicate(&duplicates, "utils.py"),
@@ -108,7 +108,7 @@ fn test_same_file_duplicate_process_user_data() {
 fn test_same_file_duplicate_config_parsers() {
     // EXPECTED_DUPLICATES.md: models.py has parse_database_config and parse_cache_config
     let config = test_config();
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     assert!(
         has_same_file_duplicate(&duplicates, "models.py"),
@@ -124,7 +124,7 @@ fn test_same_file_duplicate_fetch_functions() {
         edit_threshold: 0.20, // Looser threshold for these more varied duplicates
         ..test_config()
     };
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     assert!(
         has_same_file_duplicate(&duplicates, "services.py"),
@@ -136,7 +136,7 @@ fn test_same_file_duplicate_fetch_functions() {
 fn test_all_duplicates_within_threshold() {
     let config = test_config();
     let threshold = config.edit_threshold;
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     for dup in &duplicates {
         assert!(
@@ -154,7 +154,7 @@ fn test_all_duplicates_within_threshold() {
 fn test_no_overlapping_same_file_duplicates() {
     // Chunks from the same file that overlap should be filtered out
     let config = test_config();
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     for dup in &duplicates {
         if dup.chunk1.file == dup.chunk2.file {
@@ -178,7 +178,7 @@ fn test_no_overlapping_same_file_duplicates() {
 fn test_scans_subdirectories() {
     // Should find duplicates involving api/handlers.py
     let config = test_config();
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     let has_handlers = duplicates.iter().any(|d| {
         d.chunk1.file.to_string_lossy().contains("handlers.py")
@@ -197,7 +197,7 @@ fn test_scans_subdirectories() {
 fn test_extension_filtering() {
     // Create config that only looks at .rs files (none exist in fake_code)
     let config = Config {
-        path: PathBuf::from("../tests/fake_code"),
+        path: PathBuf::from("tests/fake_code"),
         extensions: vec!["rs".to_string()],
         min_len: 10,
         max_len: 500,
@@ -207,7 +207,7 @@ fn test_extension_filtering() {
         lsh_bands: 32,
         json_output: false,
     };
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     // Should find no duplicates since there are no .rs files
     assert!(
@@ -227,8 +227,8 @@ fn test_higher_threshold_finds_more() {
         ..test_config()
     };
 
-    let strict_dups = dryer::run(strict_config).expect("run should succeed");
-    let loose_dups = dryer::run(loose_config).expect("run should succeed");
+    let strict_dups = dryer::run(&strict_config).expect("run should succeed");
+    let loose_dups = dryer::run(&loose_config).expect("run should succeed");
 
     // Looser threshold should find at least as many duplicates
     assert!(
@@ -246,7 +246,7 @@ fn test_unique_algorithms_not_matched() {
         edit_threshold: 0.30, // Even with loose threshold
         ..test_config()
     };
-    let duplicates = dryer::run(config).expect("run should succeed");
+    let duplicates = dryer::run(&config).expect("run should succeed");
 
     // Check that fibonacci and quicksort aren't matching each other
     let fib_quick_match = duplicates.iter().any(|d| {
@@ -268,7 +268,7 @@ fn test_unique_algorithms_not_matched() {
 
 /// Regression test for Bug #2: Parameter validation
 /// Previously, invalid configs would silently produce wrong results.
-/// Now run() validates config and returns an error for invalid parameters.
+/// Now `run()` validates config and returns an error for invalid parameters.
 #[test]
 fn test_regression_invalid_config_min_exceeds_max() {
     let config = Config {
@@ -277,7 +277,7 @@ fn test_regression_invalid_config_min_exceeds_max() {
         ..test_config()
     };
 
-    let result = dryer::run(config);
+    let result = dryer::run(&config);
     assert!(
         result.is_err(),
         "run() should fail when min_len > max_len"
@@ -291,7 +291,7 @@ fn test_regression_invalid_config_edit_threshold_out_of_range() {
         ..test_config()
     };
 
-    let result = dryer::run(config);
+    let result = dryer::run(&config);
     assert!(
         result.is_err(),
         "run() should fail when edit_threshold > 1.0"
@@ -305,7 +305,7 @@ fn test_regression_invalid_config_shingle_size_zero() {
         ..test_config()
     };
 
-    let result = dryer::run(config);
+    let result = dryer::run(&config);
     assert!(
         result.is_err(),
         "run() should fail when shingle_size is 0"
@@ -320,7 +320,7 @@ fn test_regression_invalid_config_minhash_less_than_bands() {
         ..test_config()
     };
 
-    let result = dryer::run(config);
+    let result = dryer::run(&config);
     assert!(
         result.is_err(),
         "run() should fail when minhash_size < lsh_bands"

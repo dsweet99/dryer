@@ -11,20 +11,19 @@ pub enum ConfigError {
 impl std::fmt::Display for ConfigError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConfigError::MinLenExceedsMaxLen { min_len, max_len } => {
-                write!(f, "min_len ({}) must be less than max_len ({})", min_len, max_len)
+            Self::MinLenExceedsMaxLen { min_len, max_len } => {
+                write!(f, "min_len ({min_len}) must be less than max_len ({max_len})")
             }
-            ConfigError::InvalidEditThreshold(t) => {
-                write!(f, "edit_threshold ({}) must be in range [0.0, 1.0]", t)
+            Self::InvalidEditThreshold(t) => {
+                write!(f, "edit_threshold ({t}) must be in range [0.0, 1.0]")
             }
-            ConfigError::InvalidShingleSize(s) => {
-                write!(f, "shingle_size ({}) must be > 0", s)
+            Self::InvalidShingleSize(s) => {
+                write!(f, "shingle_size ({s}) must be > 0")
             }
-            ConfigError::MinhashSizeTooSmall { minhash_size, lsh_bands } => {
+            Self::MinhashSizeTooSmall { minhash_size, lsh_bands } => {
                 write!(
                     f,
-                    "minhash_size ({}) should be >= lsh_bands ({}) for proper band distribution",
-                    minhash_size, lsh_bands
+                    "minhash_size ({minhash_size}) should be >= lsh_bands ({lsh_bands}) for proper band distribution"
                 )
             }
         }
@@ -48,7 +47,7 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Config {
+        Self {
             path: PathBuf::from("."),
             extensions: vec![],
             min_len: 10,

@@ -25,7 +25,7 @@ pub fn compute_signatures(chunks: &[Chunk], config: &Config) -> Vec<Signature> {
 
 fn generate_hash_coefficients(count: usize) -> HashCoefficients {
     let mut coefficients = Vec::with_capacity(count);
-    let mut state = 0x9E3779B97F4A7C15_u64;
+    let mut state = 0x9E37_79B9_7F4A_7C15_u64;
 
     for _ in 0..count {
         let a = splitmix64(&mut state) | 1;
@@ -36,11 +36,11 @@ fn generate_hash_coefficients(count: usize) -> HashCoefficients {
     coefficients
 }
 
-fn splitmix64(state: &mut u64) -> u64 {
-    *state = state.wrapping_add(0x9E3779B97F4A7C15);
+const fn splitmix64(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
     let mut z = *state;
-    z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
     z ^ (z >> 31)
 }
 
@@ -64,6 +64,7 @@ mod tests {
     use super::*;
     use crate::test_utils::{config_with_minhash, make_simple_chunk};
 
+    #[allow(clippy::cast_precision_loss)]
     fn estimate_jaccard_similarity(sig1: &[u64], sig2: &[u64]) -> f64 {
         assert_eq!(sig1.len(), sig2.len());
         let matching_hashes = sig1.iter().zip(sig2).filter(|(a, b)| a == b).count();
@@ -81,7 +82,7 @@ mod tests {
         let sig1 = compute_minhash(&shingles, &coefficients);
         let sig2 = compute_minhash(&shingles, &coefficients);
 
-        assert_eq!(estimate_jaccard_similarity(&sig1, &sig2), 1.0);
+        assert!((estimate_jaccard_similarity(&sig1, &sig2) - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -128,7 +129,7 @@ mod tests {
         let signatures = compute_signatures(&chunks, &config);
 
         assert_eq!(signatures[0].hashes, signatures[1].hashes);
-        assert_eq!(estimate_jaccard_similarity(&signatures[0].hashes, &signatures[1].hashes), 1.0);
+        assert!((estimate_jaccard_similarity(&signatures[0].hashes, &signatures[1].hashes) - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -142,7 +143,7 @@ mod tests {
         let signatures = compute_signatures(&chunks, &config);
 
         let similarity = estimate_jaccard_similarity(&signatures[0].hashes, &signatures[1].hashes);
-        assert!(similarity > 0.5, "Similarity was {}", similarity);
+        assert!(similarity > 0.5, "Similarity was {similarity}");
     }
 
     #[test]
@@ -156,7 +157,7 @@ mod tests {
         let signatures = compute_signatures(&chunks, &config);
 
         let similarity = estimate_jaccard_similarity(&signatures[0].hashes, &signatures[1].hashes);
-        assert!(similarity < 0.5, "Similarity was {}", similarity);
+        assert!(similarity < 0.5, "Similarity was {similarity}");
     }
 
     #[test]

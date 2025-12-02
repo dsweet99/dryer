@@ -31,7 +31,7 @@ struct Args {
     #[arg(long, default_value = "5")]
     shingle_size: usize,
 
-    /// Number of MinHash functions
+    /// Number of `MinHash` functions
     #[arg(long, default_value = "128")]
     minhash_size: usize,
 
@@ -70,11 +70,11 @@ fn main() {
 
     let json_output = config.json_output;
     
-    match dryer::run(config) {
+    match dryer::run(&config) {
         Ok(duplicates) => {
             if json_output {
                 if let Err(e) = output::print_json(&duplicates) {
-                    eprintln!("Error: {}", e);
+                    eprintln!("Error: {e}");
                     std::process::exit(1);
                 }
             } else {
@@ -82,7 +82,7 @@ fn main() {
             }
         }
         Err(e) => {
-            eprintln!("Error: {}", e);
+            eprintln!("Error: {e}");
             std::process::exit(1);
         }
     }

@@ -19,10 +19,10 @@ pub fn scan_files(root: &Path, extensions: &[String]) -> io::Result<Vec<SourceFi
         .git_exclude(true)
         .ignore(true)
         .build()
-        .filter_map(|e| e.ok())
+        .filter_map(Result::ok)
         .filter(|e| e.path().is_file())
         .filter(|e| matches_extension_filter(e.path(), extensions))
-        .map(|e| e.into_path())
+        .map(ignore::DirEntry::into_path)
         .collect();
 
     let files: Vec<SourceFile> = paths

@@ -156,7 +156,7 @@ mod tests {
         let content = "def foo():\n    return 42\n    # comment\n".to_string();
         let file = SourceFile {
             path: Arc::new(PathBuf::from("test.py")),
-            content: content.clone(),
+            content,
         };
         let config = test_config();
         let chunks = generate_file_chunks(&file, &config);
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_overlapping_chunks() {
-        let lines: Vec<String> = (0..20).map(|i| format!("line number {}", i)).collect();
+        let lines: Vec<String> = (0..20).map(|i| format!("line number {i}")).collect();
         let content = lines.join("\n");
         let file = SourceFile {
             path: Arc::new(PathBuf::from("test.py")),
@@ -194,9 +194,7 @@ mod tests {
             let second_start = chunks[1].start_line;
             assert!(
                 second_start < first_end,
-                "Chunks should overlap: first ends at {}, second starts at {}",
-                first_end,
-                second_start
+                "Chunks should overlap: first ends at {first_end}, second starts at {second_start}"
             );
         }
     }

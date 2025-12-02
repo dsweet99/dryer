@@ -5,7 +5,7 @@
 //! This measures the time taken by each phase of the pipeline:
 //! 1. File scanning
 //! 2. Chunk generation
-//! 3. MinHash signature computation
+//! 3. `MinHash` signature computation
 //! 4. LSH candidate generation
 //! 5. Edit distance verification
 
@@ -50,10 +50,10 @@ fn main() {
 
     // Warm-up run
     println!("Warming up...");
-    let _ = dryer::run(config.clone());
+    let _ = dryer::run(&config);
     println!();
 
-    println!("Running {} benchmark runs ({} iterations each)...", BENCHMARK_RUNS, ITERATIONS_PER_RUN);
+    println!("Running {BENCHMARK_RUNS} benchmark runs ({ITERATIONS_PER_RUN} iterations each)...");
     println!();
 
     let mut run_results: Vec<RunResult> = Vec::with_capacity(BENCHMARK_RUNS);
@@ -69,7 +69,7 @@ fn main() {
     }
 
     println!();
-    println!("=== Results ({} runs) ===", BENCHMARK_RUNS);
+    println!("=== Results ({BENCHMARK_RUNS} runs) ===");
     println!();
 
     // Calculate and print statistics
@@ -82,7 +82,9 @@ fn main() {
     print_stats("TOTAL", &run_results, |r| r.total_ms);
     
     println!();
+    #[allow(clippy::cast_precision_loss)]
     let candidates: Vec<f64> = run_results.iter().map(|r| r.candidates as f64).collect();
+    #[allow(clippy::cast_precision_loss)]
     let duplicates: Vec<f64> = run_results.iter().map(|r| r.duplicates as f64).collect();
     println!("Candidates: {:.0} ± {:.0}", mean(&candidates), std_error(&candidates));
     println!("Duplicates: {:.0} ± {:.0}", mean(&duplicates), std_error(&duplicates));
@@ -157,16 +159,19 @@ fn median_ms(times: &[Duration]) -> f64 {
     sorted[sorted.len() / 2].as_secs_f64() * 1000.0
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn mean(values: &[f64]) -> f64 {
     values.iter().sum::<f64>() / values.len() as f64
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn std_dev(values: &[f64]) -> f64 {
     let m = mean(values);
     let variance = values.iter().map(|x| (x - m).powi(2)).sum::<f64>() / values.len() as f64;
     variance.sqrt()
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn std_error(values: &[f64]) -> f64 {
     std_dev(values) / (values.len() as f64).sqrt()
 }
@@ -178,5 +183,5 @@ where
     let values: Vec<f64> = results.iter().map(&extractor).collect();
     let m = mean(&values);
     let se = std_error(&values);
-    println!("{:<22} {:>8.1} ± {:>5.1} ms", name, m, se);
+    println!("{name:<22} {m:>8.1} ± {se:>5.1} ms");
 }

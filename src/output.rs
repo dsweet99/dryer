@@ -87,13 +87,13 @@ fn print_file_locations(out: &mut impl Write, dup: &Duplicate) {
 
 fn print_chunk_diff(out: &mut impl Write, dup: &Duplicate) {
     for line in dup.chunk1.original.lines() {
-        writeln!(out, "- {}", line).unwrap();
+        writeln!(out, "- {line}").unwrap();
     }
 
     writeln!(out).unwrap();
 
     for line in dup.chunk2.original.lines() {
-        writeln!(out, "+ {}", line).unwrap();
+        writeln!(out, "+ {line}").unwrap();
     }
 }
 
@@ -102,7 +102,7 @@ fn print_summary(out: &mut impl Write, count: usize) {
         writeln!(out, "No duplicates found.").unwrap();
     } else {
         writeln!(out).unwrap();
-        writeln!(out, "Found {} duplicate(s)", count).unwrap();
+        writeln!(out, "Found {count} duplicate(s)").unwrap();
     }
 }
 

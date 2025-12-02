@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::minhash::Signature;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxBuildHasher, FxHashMap};
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct CandidatePair {
@@ -22,7 +22,7 @@ pub fn find_candidates(signatures: &[Signature], config: &Config) -> Vec<Candida
     let estimated_candidates = (signatures.len() / 10).max(1000);
     let mut candidates = rustc_hash::FxHashSet::with_capacity_and_hasher(
         estimated_candidates,
-        Default::default(),
+        FxBuildHasher,
     );
 
     for band_idx in 0..num_bands {

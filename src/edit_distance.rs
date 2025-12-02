@@ -1,3 +1,5 @@
+#![allow(clippy::cast_precision_loss)] // Intentional: normalized distances use f64
+
 use crate::chunker::Chunk;
 use crate::config::Config;
 use crate::lsh::CandidatePair;
@@ -24,11 +26,11 @@ pub fn verify_candidates(
     candidates
         .par_iter()
         .filter_map(|pair| {
-            let chunk1 = &chunks[pair.idx1];
-            let chunk2 = &chunks[pair.idx2];
+            let first_chunk = &chunks[pair.idx1];
+            let second_chunk = &chunks[pair.idx2];
 
-            let is_same_file = chunk1.file == chunk2.file;
-            if is_same_file && ranges_overlap(chunk1, chunk2) {
+            let is_same_file = first_chunk.file == second_chunk.file;
+            if is_same_file && ranges_overlap(first_chunk, second_chunk) {
                 return None;
             }
 
@@ -40,14 +42,14 @@ pub fn verify_candidates(
                 return None;
             }
 
-            let a = chunk1.normalized.as_bytes();
-            let b = chunk2.normalized.as_bytes();
+            let a = first_chunk.normalized.as_bytes();
+            let b = second_chunk.normalized.as_bytes();
             let max_len = a.len().max(b.len());
 
             if max_len == 0 {
                 return Some(Duplicate {
-                    chunk1: chunk1.clone(),
-                    chunk2: chunk2.clone(),
+                    chunk1: first_chunk.clone(),
+                    chunk2: second_chunk.clone(),
                     edit_distance: 0,
                     normalized_distance: 0.0,
                 });
@@ -58,6 +60,7 @@ pub fn verify_candidates(
                 return None;
             }
 
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let max_allowed = (config.edit_threshold * max_len as f64).ceil() as u32;
             let byte_edit_distance = match levenshtein_simd_k(a, b, max_allowed) {
                 Some(dist) => dist as usize,
@@ -71,8 +74,8 @@ pub fn verify_candidates(
             }
 
             Some(Duplicate {
-                chunk1: chunk1.clone(),
-                chunk2: chunk2.clone(),
+                chunk1: first_chunk.clone(),
+                chunk2: second_chunk.clone(),
                 edit_distance: byte_edit_distance,
                 normalized_distance: normalized_by_bytes,
             })
@@ -80,7 +83,7 @@ pub fn verify_candidates(
         .collect()
 }
 
-fn ranges_overlap(c1: &Chunk, c2: &Chunk) -> bool {
+const fn ranges_overlap(c1: &Chunk, c2: &Chunk) -> bool {
     !(c1.end_line < c2.start_line || c2.end_line < c1.start_line)
 }
 
@@ -118,7 +121,7 @@ mod tests {
     fn test_normalized_distance() {
         let dist = levenshtein_bytes("hello", "hallo");
         let max_len = 5;
-        let normalized = dist as f64 / max_len as f64;
+        let normalized = dist as f64 / f64::from(max_len);
         assert!((normalized - 0.2).abs() < 0.001);
     }
 
@@ -220,7 +223,7 @@ mod tests {
 
         assert_eq!(dups.len(), 1);
         assert_eq!(dups[0].edit_distance, 0);
-        assert_eq!(dups[0].normalized_distance, 0.0);
+        assert!(dups[0].normalized_distance.abs() < f64::EPSILON);
     }
 
     #[test]
@@ -309,7 +312,7 @@ mod tests {
         let dups = verify_candidates(&chunks, &signatures, &candidates, &config);
 
         assert_eq!(dups.len(), 1);
-        assert_eq!(dups[0].normalized_distance, 0.0);
+        assert!(dups[0].normalized_distance.abs() < f64::EPSILON);
     }
 
     #[test]
